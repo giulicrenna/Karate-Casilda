@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SITE_CONFIG, type NavGroup } from '@/lib/site';
+import SessionAwareButton from '@/components/layout/SessionAwareButton';
 
 const isActive = (href: string, pathname: string | null) =>
   !!pathname && (pathname === href || (href !== '/' && pathname.startsWith(href + '/')));
@@ -281,10 +282,8 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href="/admin" className="btn-ghost text-[10px]">
-            Admin
-          </Link>
-          <Link href="/contacto" className="btn-primary text-[10px]">
+          <SessionAwareButton />
+          <Link href="/contacto" className="btn-secondary text-[10px]">
             Sumate
           </Link>
         </div>
@@ -325,9 +324,7 @@ export default function Navbar() {
           ))}
           <MobileLink href="/contacto" label="Contacto" pathname={pathname} />
           <div className="mt-4 flex gap-2">
-            <Link href="/admin" className="btn-secondary flex-1 text-xs">
-              Admin
-            </Link>
+            <SessionAwareButton />
             <Link href="/contacto" className="btn-primary flex-1 text-xs">
               Sumate
             </Link>
