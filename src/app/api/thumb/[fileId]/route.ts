@@ -77,8 +77,9 @@ export async function GET(
     }
 
     const buffer = Buffer.from(await driveRes.arrayBuffer());
-    await fs.mkdir(CACHE_DIR, { recursive: true });
-    await fs.writeFile(cacheFile, buffer);
+    fs.mkdir(CACHE_DIR, { recursive: true })
+      .then(() => fs.writeFile(cacheFile, buffer))
+      .catch(() => {}); // ponytail: cache best-effort, never fail the response
 
     return new NextResponse(buffer, {
       headers: {
