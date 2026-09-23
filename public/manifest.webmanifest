@@ -1,0 +1,16 @@
+{
+  "name": "Karate Casilda — Dojo Shiroi Ryu",
+  "short_name": "Karate Casilda",
+  "description": "Karate tradicional Shotokan SKIF en Casilda, Santa Fe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

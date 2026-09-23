@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg: 10 10 10;        /* #0a0a0a */
+    --color-bg-soft: 26 26 26;   /* #1a1a1a */
+    --color-fg: 245 245 245;
+    --color-fg-muted: 160 160 160;
+    --color-accent: 185 28 28;   /* shiroi-700 */
+    --color-accent-soft: 127 29 29;
+    --color-line: 38 38 38;
+  }
+
+  * {
+    @apply border-ink-800;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-50 font-sans selection:bg-shiroi-700/40;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+
+  /* Tipografía display para títulos */
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+
+  /* Focus visible accesible */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-shiroi-500 ring-offset-2 ring-offset-ink-950;
+  }
+
+  /* Scrollbar dark */
+  ::-webkit-scrollbar {
+    @apply h-2 w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-600;
+  }
+}
+
+@layer components {
+  /* Línea decorativa estilo "kansuji" (numerales japoneses) */
+  .kanji-rule {
+    @apply relative pl-4 before:absolute before:left-0 before:top-1/2 before:h-px before:w-3 before:bg-shiroi-600;
+  }
+
+  /* Card minimalista */
+  .card-minimal {
+    @apply rounded-md border border-ink-800 bg-ink-900/40 backdrop-blur-sm transition-all duration-300 hover:border-ink-700;
+  }
+
+  /* Botón primario */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-shiroi-700 px-5 py-2.5 text-sm font-medium uppercase tracking-wider text-ink-50 transition-all duration-200 hover:bg-shiroi-600 active:bg-shiroi-800 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-ink-700 px-5 py-2.5 text-sm font-medium uppercase tracking-wider text-ink-100 transition-all duration-200 hover:border-ink-500 hover:bg-ink-900;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium uppercase tracking-wider text-ink-200 transition-all duration-200 hover:text-shiroi-400;
+  }
+
+  /* Eyebrow / etiqueta */
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.25em] text-shiroi-500;
+  }
+
+  /* Section wrapper */
+  .section {
+    @apply mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28;
+  }
+
+  .section-tight {
+    @apply mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8;
+  }
+
+  /* Heading hierarchy */
+  .h-display {
+    @apply font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl;
+  }
+
+  .h-section {
+    @apply font-display text-3xl leading-tight tracking-tight sm:text-4xl;
+  }
+
+  .h-subsection {
+    @apply font-display text-xl leading-tight tracking-tight sm:text-2xl;
+  }
+
+  /* Texture overlay */
+  .texture-noise::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 opacity-[0.03];
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* Vertical kanji accent line */
+  .kanji-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    @apply font-display;
+  }
+
+  /* Prose custom — render de artículos (markdown) */
+  .prose-custom h2 {
+    @apply mt-12 mb-4 font-display text-2xl text-ink-50 tracking-tight;
+  }
+  .prose-custom h3 {
+    @apply mt-10 mb-3 font-display text-xl text-ink-100 tracking-tight;
+  }
+  .prose-custom p {
+    @apply mt-5 text-ink-200 leading-relaxed;
+  }
+  .prose-custom a {
+    @apply text-shiroi-400 underline decoration-shiroi-700/40 underline-offset-2 transition-colors hover:text-shiroi-300 hover:decoration-shiroi-500;
+  }
+  .prose-custom strong {
+    @apply font-semibold text-ink-50;
+  }
+  .prose-custom em {
+    @apply italic text-ink-100;
+  }
+  .prose-custom ul {
+    @apply mt-5 list-disc space-y-2 pl-6 text-ink-200;
+  }
+  .prose-custom ol {
+    @apply mt-5 list-decimal space-y-2 pl-6 text-ink-200;
+  }
+  .prose-custom li {
+    @apply leading-relaxed;
+  }
+  .prose-custom blockquote {
+    @apply mt-6 border-l-2 border-shiroi-700 bg-ink-900/40 px-4 py-2 italic text-ink-300;
+  }
+  .prose-custom hr {
+    @apply my-10 border-ink-800;
+  }
+  .prose-custom img {
+    @apply w-full rounded-md border border-ink-800;
+  }
+  .prose-custom code {
+    @apply rounded-sm bg-ink-900 px-1.5 py-0.5 font-mono text-[0.85em] text-shiroi-300;
+  }
+  .prose-custom pre {
+    @apply mt-5 overflow-x-auto rounded-md border border-ink-800 bg-ink-950 p-4 font-mono text-sm text-ink-200;
+  }
+  .prose-custom pre code {
+    @apply bg-transparent p-0 text-ink-100;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  .mask-fade-b {
+    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  }
+}

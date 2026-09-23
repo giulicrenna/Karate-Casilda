@@ -1,0 +1,7 @@
+# robots.txt — Karate Casilda
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+
+Sitemap: https://karatecasilda.vercel.app/sitemap.xml

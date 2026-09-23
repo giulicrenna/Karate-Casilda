@@ -1,0 +1,187 @@
+// Karate Casilda — Prisma schema
+// Base de datos: PostgreSQL (Neon).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// USUARIOS — autenticación admin
+// =====================================================
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("admin") // admin | editor
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     AdminSession[]
+
+  @@index([email])
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// =====================================================
+// CONTENIDO INSTITUCIONAL — textos editables
+// =====================================================
+model SiteContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // ej: "home.hero.title", "dokun.original", "contact.address"
+  value     String   // JSON o texto plano
+  updatedAt DateTime @updatedAt
+}
+
+// =====================================================
+// AUTORES — para artículos del dojo
+// =====================================================
+model Author {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  name             String
+  photoDriveFileId String?
+  active           Boolean   @default(true) // archivar sin eliminar
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  articles         Article[]
+
+  @@index([active])
+}
+
+// =====================================================
+// ARTÍCULOS — contenido editorial del dojo
+// =====================================================
+model Article {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  title            String
+  excerpt          String    // resumen corto (cards + meta description)
+  body             String    // markdown
+  category         String    // anuncios | tecnica | historia | eventos | general
+  coverDriveFileId String?   // opcional: imagen de portada servida por /api/thumb/[id]
+  published        Boolean   @default(true)
+  featured         Boolean   @default(false) // reservado para uso futuro
+  publishedAt      DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  authorId         String
+  author           Author    @relation(fields: [authorId], references: [id])
+
+  @@index([published, publishedAt])
+  @@index([category])
+  @@index([authorId])
+}
+
+// =====================================================
+// EVENTOS
+// =====================================================
+model Event {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  date        DateTime
+  location    String?
+  description String   // markdown
+  category    String   // torneo | examen | seminario | exhibicion | entrenamiento | otro
+  coverImage  String?  // opcional: URL pública o Google Drive ID
+  status      String   @default("upcoming") // upcoming | past | cancelled
+  featured    Boolean  @default(false)
+  albumId     String?  @unique
+  album       Album?   @relation(fields: [albumId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([category])
+  @@index([featured])
+}
+
+// =====================================================
+// ÁLBUMES — asociados a carpetas de Google Drive
+// =====================================================
+model Album {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  description     String?
+  date            DateTime
+  coverImageId    String?  // Google Drive file ID (portada)
+  driveFolderId   String   // Google Drive folder ID
+  driveFolderPath String?  // opcional: path legible "Karate Casilda/2026/Torneo Casilda 2026"
+  photoCount      Int      @default(0)
+  featured        Boolean  @default(false)
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  event           Event?
+
+  @@index([date])
+  @@index([featured])
+}
+
+// =====================================================
+// CACHÉ DE FOTOS DE GOOGLE DRIVE
+// Almacenamos metadatos para no pegarle a Drive cada vez.
+// El archivo original SIEMPRE vive en Google Drive.
+// =====================================================
+model DrivePhotoCache {
+  id           String   @id @default(cuid())
+  albumId      String
+  driveFileId  String   @unique
+  name         String
+  mimeType     String
+  mediaType    String   @default("image") // image | video
+  width        Int?
+  height       Int?
+  sizeBytes    Int?
+  thumbnailUrl String?  // URL cacheada del thumbnail (lh3.googleusercontent.com)
+  viewUrl      String?  // URL cacheada para ver en tamaño completo
+  downloadUrl  String?  // URL cacheada para descarga
+  createdAt    DateTime @default(now())
+  cachedAt     DateTime @default(now())
+
+  @@index([albumId])
+}
+
+// =====================================================
+// LOG DE AUDITORÍA — acciones del admin
+// =====================================================
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // login | create_event | update_album | delete_photo | etc
+  entity    String?  // event | album | user | content
+  entityId  String?
+  metadata  String?  // JSON con detalles
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// =====================================================
+// INTEGRACIONES — credenciales cifradas en DB
+// =====================================================
+model IntegrationConfig {
+  key       String   @id // ej: "google_drive_sa"
+  encrypted String   // AES-256-GCM (iv:tag:ciphertext, hex)
+  updatedAt DateTime @updatedAt
+}
