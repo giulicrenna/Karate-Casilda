@@ -133,6 +133,7 @@ export default function GalleryGrid({ photos, albumTitle }: GalleryGridProps) {
                 className="max-h-full max-w-full object-contain"
               />
             ) : (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={current!.viewUrl ?? ''}
                 alt={current!.name}

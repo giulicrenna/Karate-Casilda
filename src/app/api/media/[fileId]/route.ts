@@ -26,7 +26,7 @@ export async function GET(
     scopes: ['https://www.googleapis.com/auth/drive.readonly'],
   });
   const authClient = await auth.getClient();
-  const drive = google.drive({ version: 'v3', auth: authClient });
+  const drive = google.drive({ version: 'v3', auth: authClient as any });
 
   const meta = await drive.files.get({
     fileId: params.fileId,

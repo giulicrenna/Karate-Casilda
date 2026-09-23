@@ -12,7 +12,7 @@ function deriveKey(purpose: string): Buffer {
       'SESSION_PASSWORD debe estar definida en .env con al menos 32 caracteres y no ser el placeholder.'
     );
   }
-  return crypto.hkdfSync('sha256', secret, '', purpose, KEY_LEN);
+  return crypto.hkdfSync('sha256', secret, '', purpose, KEY_LEN) as unknown as Buffer;
 }
 
 export function encryptSecret(plain: string, purpose: string): string {

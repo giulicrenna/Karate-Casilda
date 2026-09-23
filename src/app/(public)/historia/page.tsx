@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import type { Metadata } from 'next';
 import SectionHeader from '@/components/sections/SectionHeader';
 import { getContent } from '@/lib/utils';
