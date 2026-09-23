@@ -2,20 +2,54 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Calendar, Images, FileText, BarChart3, Home, Plug, UserCircle, Newspaper } from 'lucide-react';
+import {
+  Calendar,
+  Images,
+  FileText,
+  Home,
+  Plug,
+  UserCircle,
+  Newspaper,
+  Users,
+  Wallet,
+  Receipt,
+  ShieldCheck,
+  Bell,
+  Timer,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const NAV = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  superadminOnly?: boolean;
+};
+
+const NAV: NavItem[] = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: <Home className="h-4 w-4" /> },
+  { href: '/admin/alumnos', label: 'Alumnos', icon: <Users className="h-4 w-4" /> },
+  { href: '/admin/pagos', label: 'Pagos', icon: <Wallet className="h-4 w-4" /> },
+  { href: '/admin/cuotas', label: 'Cuotas', icon: <Receipt className="h-4 w-4" /> },
   { href: '/admin/eventos', label: 'Eventos', icon: <Calendar className="h-4 w-4" /> },
   { href: '/admin/albumes', label: 'Álbumes', icon: <Images className="h-4 w-4" /> },
   { href: '/admin/articulos', label: 'Artículos', icon: <Newspaper className="h-4 w-4" /> },
   { href: '/admin/autores', label: 'Autores', icon: <UserCircle className="h-4 w-4" /> },
   { href: '/admin/contenido', label: 'Contenido', icon: <FileText className="h-4 w-4" /> },
   { href: '/admin/integraciones', label: 'Integraciones', icon: <Plug className="h-4 w-4" /> },
+  { href: '/admin/notificaciones', label: 'Notificaciones', icon: <Bell className="h-4 w-4" /> },
+  { href: '/admin/cron', label: 'Cron jobs', icon: <Timer className="h-4 w-4" /> },
+  { href: '/admin/usuarios', label: 'Usuarios', icon: <ShieldCheck className="h-4 w-4" />, superadminOnly: true },
 ];
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+  role,
+}: {
+  children: React.ReactNode;
+  role?: 'superadmin' | 'admin' | 'editor';
+}) {
+  const items = NAV.filter((i) => !i.superadminOnly || role === 'superadmin');
   const pathname = usePathname();
 
   return (
@@ -36,7 +70,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5" aria-label="Admin">
-          {NAV.map((item) => {
+          {items.map((item) => {
             const active = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (
               <Link
@@ -76,7 +110,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </Link>
         </div>
         <nav className="mt-2 flex gap-1 overflow-x-auto" aria-label="Admin">
-          {NAV.map((item) => {
+          {items.map((item) => {
             const active = pathname === item.href || pathname?.startsWith(item.href + '/');
             return (
               <Link

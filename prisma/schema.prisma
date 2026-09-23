@@ -18,7 +18,7 @@ model AdminUser {
   email        String   @unique
   name         String
   passwordHash String
-  role         String   @default("admin") // admin | editor
+  role         String   @default("admin") // superadmin | admin | editor
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   sessions     AdminSession[]
@@ -181,7 +181,286 @@ model AuditLog {
 // INTEGRACIONES — credenciales cifradas en DB
 // =====================================================
 model IntegrationConfig {
-  key       String   @id // ej: "google_drive_sa"
+  key       String   @id // ej: "google_drive_sa", "mercadopago", "wasender", "email"
   encrypted String   // AES-256-GCM (iv:tag:ciphertext, hex)
   updatedAt DateTime @updatedAt
+}
+
+// =====================================================
+// ALUMNOS — autenticación y datos básicos
+// =====================================================
+model Student {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  dni           String?  @unique
+  phone         String?
+  whatsapp      String?  // E.164, usado por WaSender
+  birthDate     DateTime?
+  active        Boolean  @default(true) // baja lógica
+  joinedAt      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  mustChangePwd Boolean  @default(true) // fuerza cambio en primer login
+
+  profile          StudentProfile?
+  certificates     Certificate[]
+  attendance       AttendanceRecord[]
+  debts            Debt[]
+  payments         Payment[]
+  sessions         StudentSession[]
+  passwordResets   StudentPasswordReset[]
+
+  @@index([active])
+  @@index([lastName, firstName])
+}
+
+model StudentProfile {
+  id                   String   @id @default(cuid())
+  studentId            String   @unique
+  weightKg             Decimal? @db.Decimal(5, 2)
+  heightCm             Int?
+  emergencyName        String?
+  emergencyPhone       String?
+  medicalNotes         String?  @db.Text
+  allergies            String?
+  photoDriveFileId     String?
+  attendanceDaysPerWeek Int     @default(2) // base para fee engine: 1..7
+  belt                 String?  // blanca | amarilla | naranja | verde | azul | marfil | negra
+  notes                String?  @db.Text
+  updatedAt            DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model StudentSession {
+  id        String   @id @default(cuid())
+  studentId String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([expiresAt])
+}
+
+model StudentPasswordReset {
+  id        String   @id @default(cuid())
+  studentId String
+  tokenHash String   @unique // SHA-256 del token enviado por email
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+
+// =====================================================
+// CERTIFICADOS — PDFs / PNGs subidos por admin (viven en Drive)
+// =====================================================
+model Certificate {
+  id           String   @id @default(cuid())
+  studentId    String
+  title        String
+  type         String   // cinturon | diploma | asistencia | otro
+  issuedAt     DateTime @default(now())
+  driveFileId  String   // archivo en Google Drive (mismo patrón que fotos)
+  fileMimeType String
+  fileName     String
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, issuedAt])
+}
+
+// =====================================================
+// REGLAS DE CUOTA — definición de precios por nivel
+// =====================================================
+model FeeRule {
+  id             String    @id @default(cuid())
+  name           String    // "Cuota mensual 2 días"
+  daysPerWeek    Int       // 1..7
+  monthlyAmount  Decimal   @db.Decimal(10, 2)
+  effectiveFrom  DateTime  @default(now())
+  effectiveUntil DateTime?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([active, daysPerWeek])
+}
+
+// Reglas de recargo por mora
+model LateSurchargeRule {
+  id             String    @id @default(cuid())
+  name           String    // "Recargo 10% a partir del día 11"
+  graceDays      Int       @default(10) // día del mes en que empieza a regir
+  surchargePct   Decimal   @db.Decimal(5, 2) // ej 10.00 = 10%
+  active         Boolean   @default(true)
+  effectiveFrom  DateTime  @default(now())
+  effectiveUntil DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// =====================================================
+// ASISTENCIA — base para cálculo de cuota (futuro)
+// =====================================================
+model AttendanceRecord {
+  id         String   @id @default(cuid())
+  studentId  String
+  date       DateTime @db.Date
+  present    Boolean  @default(true)
+  notes      String?
+  recordedBy String?  // adminUserId
+  createdAt  DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([date])
+}
+
+// =====================================================
+// DEUDA / CARGOS MENSUALES
+// =====================================================
+model Debt {
+  id               String   @id @default(cuid())
+  studentId        String
+  periodYear       Int
+  periodMonth      Int      // 1..12
+  baseAmount       Decimal  @db.Decimal(10, 2)
+  surchargeAmount  Decimal  @default(0) @db.Decimal(10, 2)
+  manualAdjustment Decimal  @default(0) @db.Decimal(10, 2) // +/- ajuste manual admin
+  totalAmount      Decimal  @db.Decimal(10, 2) // base + surcharge + manual
+  paidAmount       Decimal  @default(0) @db.Decimal(10, 2)
+  dueDate          DateTime
+  status           String   @default("pending") // pending | partial | paid | overdue | cancelled
+  manualNote       String?
+  notes            String?
+  generatedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  notifications NotificationLog[]
+
+  @@unique([studentId, periodYear, periodMonth])
+  @@index([status])
+  @@index([periodYear, periodMonth])
+}
+
+// =====================================================
+// PAGOS (uno por transacción MP o carga manual)
+// =====================================================
+model Payment {
+  id             String   @id @default(cuid())
+  studentId      String
+  debtId         String?
+  amount         Decimal  @db.Decimal(10, 2)
+  currency       String   @default("ARS")
+  method         String   // mercadopago | manual | cash | transfer
+  status         String   @default("pending") // pending | approved | rejected | refunded
+  mpPaymentId    String?  @unique
+  mpPreferenceId String?  @unique
+  mpStatus       String?
+  mpStatusDetail String?
+  paidAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  metadata       String?  @db.Text // JSON crudo de MP (idempotente)
+  receiptUrl     String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  debt    Debt?   @relation(fields: [debtId], references: [id])
+
+  @@index([studentId, createdAt])
+  @@index([debtId])
+  @@index([status])
+}
+
+model PaymentWebhookEvent {
+  id           String   @id @default(cuid())
+  source       String   // mercadopago
+  eventType    String   // payment | plan | subscription
+  mpPaymentId  String?
+  payload      String   @db.Text // JSON crudo
+  processed    Boolean  @default(false)
+  processedAt  DateTime?
+  errorMessage String?
+  receivedAt   DateTime @default(now())
+
+  @@index([processed, receivedAt])
+  @@index([mpPaymentId])
+}
+
+// =====================================================
+// GASTOS DEL DOJO
+// =====================================================
+model Expense {
+  id                String   @id @default(cuid())
+  category          String   // alquiler | sueldos | servicios | insumos | mantenimiento | impuestos | otro
+  description       String
+  amount            Decimal  @db.Decimal(10, 2)
+  occurredAt        DateTime
+  vendor            String?
+  receiptDriveFileId String?
+  notes             String?
+  recordedBy        String?  // adminUserId
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([occurredAt])
+  @@index([category])
+}
+
+// =====================================================
+// LOG DE NOTIFICACIONES — email + whatsapp
+// =====================================================
+model NotificationLog {
+  id               String   @id @default(cuid())
+  channel          String   // email | whatsapp
+  recipient        String   // email o teléfono
+  template         String   // payment_received | due_reminder | overdue_notice | welcome | password_reset
+  relatedDebtId    String?
+  relatedStudentId String?
+  payload          String   @db.Text // JSON con variables usadas
+  status           String   @default("pending") // sent | failed | skipped
+  errorMessage     String?
+  sentAt           DateTime?
+  createdAt        DateTime @default(now())
+
+  debt Debt? @relation(fields: [relatedDebtId], references: [id])
+
+  @@index([relatedStudentId])
+  @@index([channel, status])
+  @@index([createdAt])
+}
+
+// =====================================================
+// CRON RUNS — log de ejecuciones de cron jobs
+// =====================================================
+model CronRun {
+  id           String    @id @default(cuid())
+  jobName      String    // "monthly_debts" | "overdue_check"
+  status       String    @default("running") // running | success | failed
+  trigger      String    // "cron_vercel" | "manual_admin" | "manual_superadmin" | "system"
+  triggeredBy  String?   // userId del admin que disparó (null si fue Vercel Cron automático)
+  startedAt    DateTime  @default(now())
+  finishedAt   DateTime?
+  durationMs   Int?
+  metadata     String?   @db.Text // JSON con {generated, skipped, markedOverdue, notificationsSent, errors, periodYear, periodMonth}
+  errorMessage String?
+
+  @@index([jobName, startedAt])
+  @@index([status])
+  @@index([triggeredBy])
 }

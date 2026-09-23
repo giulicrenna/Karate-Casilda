@@ -1,6 +1,6 @@
 // prisma/seed.ts
 // Ejecutar con: npm run db:seed
-// Crea el usuario administrador inicial y contenido demo.
+// Crea el usuario superadmin/administrador inicial y contenido demo.
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -24,18 +24,42 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
+  // Superadmin (opcional, desde SUPERADMIN_*). Si coincide con ADMIN_*, ese usuario es superadmin.
+  const superadminEmail = process.env.SUPERADMIN_EMAIL;
+  const superadminPassword = process.env.SUPERADMIN_PASSWORD;
+
+  if (superadminEmail && superadminPassword && superadminPassword.length >= 8 && !superadminPassword.includes('REEMPLAZAR')) {
+    const superHash = await bcrypt.hash(superadminPassword, 12);
+    const superadmin = await prisma.adminUser.upsert({
+      where: { email: superadminEmail },
+      update: { name: 'Superadministrador', passwordHash: superHash, role: 'superadmin' },
+      create: {
+        email: superadminEmail,
+        name: 'Superadministrador',
+        passwordHash: superHash,
+        role: 'superadmin',
+      },
+    });
+    console.log(`✅ Superadmin creado/actualizado: ${superadmin.email}`);
+  }
+
   const admin = await prisma.adminUser.upsert({
     where: { email: adminEmail },
-    update: { name: adminName, passwordHash },
+    update: {
+      name: adminName,
+      passwordHash,
+      // Promover a superadmin si coincide con SUPERADMIN_EMAIL
+      role: superadminEmail && adminEmail === superadminEmail ? 'superadmin' : 'admin',
+    },
     create: {
       email: adminEmail,
       name: adminName,
       passwordHash,
-      role: 'admin',
+      role: superadminEmail && adminEmail === superadminEmail ? 'superadmin' : 'admin',
     },
   });
 
-  console.log(`✅ Admin inicial creado/actualizado: ${admin.email}`);
+  console.log(`✅ Admin inicial creado/actualizado: ${admin.email} (role: ${admin.role})`);
 
   // Contenido institucional por defecto (editables desde el panel)
   const defaults: Array<{ key: string; value: string }> = [

@@ -1,10 +1,26 @@
 import Link from 'next/link';
-import { Calendar, Images, Users, BarChart3, LogOut, FileText, Camera } from 'lucide-react';
+import {
+  Calendar,
+  Images,
+  Users,
+  BarChart3,
+  LogOut,
+  FileText,
+  Camera,
+  AlertTriangle,
+  Wallet,
+  Banknote,
+  TrendingUp,
+  ClipboardList,
+} from 'lucide-react';
 import { requireAdmin } from '@/lib/guards';
 import { prisma } from '@/lib/db';
 import AdminShell from '@/components/admin/AdminShell';
 import LogoutButton from '@/components/admin/LogoutButton';
 import { googleDriveConfigured } from '@/services/google-drive';
+import { formatARS } from '@/lib/money';
+import { formatPeriod } from '@/lib/schedule';
+import type { DebtStatus } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Dashboard', robots: { index: false, follow: false } };
@@ -12,7 +28,24 @@ export const metadata = { title: 'Dashboard', robots: { index: false, follow: fa
 export default async function DashboardPage() {
   const session = await requireAdmin();
 
-  const [eventCount, albumCount, photoCount, upcomingEvents, recentAlbums, driveConfigured] = await Promise.all([
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    eventCount,
+    albumCount,
+    photoCount,
+    upcomingEvents,
+    recentAlbums,
+    driveConfigured,
+    activeStudents,
+    totalStudents,
+    overdueStudentsAgg,
+    collectedThisMonthAgg,
+    pendingAgg,
+    topDebtorsRaw,
+    recentPayments,
+  ] = await Promise.all([
     prisma.event.count(),
     prisma.album.count(),
     prisma.drivePhotoCache.count(),
@@ -26,7 +59,80 @@ export default async function DashboardPage() {
       take: 5,
     }),
     googleDriveConfigured(),
+    prisma.student.count({ where: { active: true } }),
+    prisma.student.count(),
+    prisma.student.count({
+      where: {
+        active: true,
+        debts: {
+          some: { status: { in: ['overdue', 'pending', 'partial'] as DebtStatus[] } },
+        },
+      },
+    }),
+    prisma.payment.aggregate({
+      where: {
+        status: 'approved',
+        paidAt: { gte: firstDayOfMonth },
+      },
+      _sum: { amount: true },
+    }),
+    prisma.debt.aggregate({
+      where: { status: { in: ['pending', 'partial', 'overdue'] as DebtStatus[] } },
+      _sum: { totalAmount: true, paidAmount: true },
+    }),
+    // Top 3 deudores — saldo pendiente (excluye pagadas/canceladas)
+    prisma.debt.findMany({
+      where: {
+        status: { in: ['overdue', 'pending', 'partial'] as DebtStatus[] },
+        student: { active: true },
+      },
+      select: {
+        id: true,
+        studentId: true,
+        totalAmount: true,
+        paidAmount: true,
+        student: { select: { firstName: true, lastName: true } },
+      },
+      take: 50,
+    }),
+    prisma.payment.findMany({
+      where: { status: 'approved' },
+      orderBy: { paidAt: 'desc' },
+      take: 5,
+      include: {
+        student: { select: { firstName: true, lastName: true } },
+      },
+    }),
   ]);
+
+  const collectedThisMonth = Number(collectedThisMonthAgg._sum.amount ?? 0);
+  const totalPending = Math.max(
+    0,
+    Number(pendingAgg._sum.totalAmount ?? 0) - Number(pendingAgg._sum.paidAmount ?? 0),
+  );
+
+  // Agrupar saldo por alumno y ordenar top 3
+  const balanceByStudent = new Map<
+    string,
+    { name: string; balance: number }
+  >();
+  for (const d of topDebtorsRaw) {
+    const balance =
+      Number(d.totalAmount.toString()) - Number(d.paidAmount.toString());
+    if (balance <= 0) continue;
+    const existing = balanceByStudent.get(d.studentId);
+    if (existing) {
+      existing.balance += balance;
+    } else {
+      balanceByStudent.set(d.studentId, {
+        name: `${d.student.firstName} ${d.student.lastName}`.trim(),
+        balance,
+      });
+    }
+  }
+  const topDebtors = Array.from(balanceByStudent.values())
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 3);
 
   return (
     <AdminShell>
@@ -41,10 +147,56 @@ export default async function DashboardPage() {
         <LogoutButton />
       </header>
 
+      {/* KPIs institucionales */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<Calendar className="h-5 w-5" />} label="Eventos" value={eventCount} href="/admin/eventos" />
-        <StatCard icon={<Images className="h-5 w-5" />} label="Álbumes" value={albumCount} href="/admin/albumes" />
-        <StatCard icon={<Camera className="h-5 w-5" />} label="Fotos en caché" value={photoCount} />
+        <StatCard
+          icon={<Users className="h-5 w-5" />}
+          label="Alumnos activos"
+          value={activeStudents}
+          hint={`Total: ${totalStudents}`}
+          href="/admin/alumnos"
+        />
+        <StatCard
+          icon={<AlertTriangle className="h-5 w-5" />}
+          label="Con deudas vencidas"
+          value={overdueStudentsAgg}
+          valueClass="text-shiroi-400"
+          href="/admin/pagos"
+        />
+        <StatCard
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Cobrado este mes"
+          value={formatARS(collectedThisMonth)}
+          hint={formatPeriod(now.getFullYear(), now.getMonth() + 1)}
+          href="/admin/pagos/pagos"
+        />
+        <StatCard
+          icon={<Wallet className="h-5 w-5" />}
+          label="Pendiente total"
+          value={formatARS(totalPending)}
+          href="/admin/pagos"
+        />
+      </div>
+
+      {/* KPIs del sitio institucional */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={<Calendar className="h-5 w-5" />}
+          label="Eventos"
+          value={eventCount}
+          href="/admin/eventos"
+        />
+        <StatCard
+          icon={<Images className="h-5 w-5" />}
+          label="Álbumes"
+          value={albumCount}
+          href="/admin/albumes"
+        />
+        <StatCard
+          icon={<Camera className="h-5 w-5" />}
+          label="Fotos en caché"
+          value={photoCount}
+        />
         <StatCard
           icon={<BarChart3 className="h-5 w-5" />}
           label="Google Drive"
@@ -53,6 +205,59 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Top deudores */}
+        <Panel title="Top deudores" href="/admin/pagos" linkLabel="Ver todas">
+          {topDebtors.length === 0 ? (
+            <Empty text="Sin deudas pendientes." />
+          ) : (
+            <ul className="divide-y divide-ink-900">
+              {topDebtors.map((d, idx) => (
+                <li key={`${d.name}-${idx}`} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <div className="font-display text-sm text-ink-100 truncate">{d.name}</div>
+                    <div className="text-xs text-ink-500">#{idx + 1} deudor</div>
+                  </div>
+                  <div className="font-display text-sm text-shiroi-400 whitespace-nowrap">
+                    {formatARS(d.balance)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        {/* Últimos pagos */}
+        <Panel title="Últimos pagos recibidos" href="/admin/pagos/pagos" linkLabel="Ver historial">
+          {recentPayments.length === 0 ? (
+            <Empty text="Sin pagos registrados." />
+          ) : (
+            <ul className="divide-y divide-ink-900">
+              {recentPayments.map((p) => {
+                const name = `${p.student.firstName} ${p.student.lastName}`.trim();
+                const paidAt = p.paidAt
+                  ? new Date(p.paidAt).toLocaleDateString('es-AR', { dateStyle: 'short' })
+                  : '—';
+                return (
+                  <li key={p.id} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <div className="font-display text-sm text-ink-100 truncate">{name}</div>
+                      <div className="text-xs text-ink-500">
+                        {paidAt} · {p.method}
+                      </div>
+                    </div>
+                    <div className="font-display text-sm text-emerald-400 whitespace-nowrap">
+                      {formatARS(Number(p.amount))}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </div>
+
+      {/* Próximos eventos + recientes */}
       <div className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Próximos eventos" href="/admin/eventos" linkLabel="Ver todos">
           {upcomingEvents.length === 0 ? (
@@ -111,6 +316,7 @@ export default async function DashboardPage() {
         </Panel>
       </div>
 
+      {/* Acciones rápidas */}
       <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         <QuickAction
           href="/admin/eventos/nuevo"
@@ -131,6 +337,27 @@ export default async function DashboardPage() {
           desc="Textos del sitio, contacto."
         />
       </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <QuickAction
+          href="/admin/pagos/reportes"
+          icon={<Banknote className="h-4 w-4" />}
+          title="Reportes de pagos"
+          desc="Revenue, gastos y cobrabilidad."
+        />
+        <QuickAction
+          href="/admin/alumnos/nuevo"
+          icon={<ClipboardList className="h-4 w-4" />}
+          title="Nuevo alumno"
+          desc="Cargar alumno y notificar credenciales."
+        />
+        <QuickAction
+          href="/admin/cuotas/nuevo"
+          icon={<Wallet className="h-4 w-4" />}
+          title="Nueva regla de cuota"
+          desc="Definir precio por días/sem."
+        />
+      </div>
     </AdminShell>
   );
 }
@@ -140,12 +367,14 @@ function StatCard({
   label,
   value,
   href,
+  hint,
   valueClass = 'text-ink-50',
 }: {
   icon: React.ReactNode;
   label: string;
   value: string | number;
   href?: string;
+  hint?: string;
   valueClass?: string;
 }) {
   const content = (
@@ -155,6 +384,7 @@ function StatCard({
         <div className="text-shiroi-600">{icon}</div>
       </div>
       <div className={`mt-3 font-display text-3xl ${valueClass}`}>{value}</div>
+      {hint && <div className="mt-1 text-[11px] text-ink-500">{hint}</div>}
     </div>
   );
   return href ? <Link href={href}>{content}</Link> : content;

@@ -1,10 +1,13 @@
 // Sistema de autenticación simple para el panel admin.
-// Usa cookies HTTP-only firmadas con iron-session y bcrypt para hashes.
+// Usa cookies HTTP-only firmadas con HMAC-SHA256 y bcrypt para hashes.
 // Diseñado para ser seguro y compatible con Vercel (sin estado en memoria).
 
 import 'server-only';
 import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
+import { checkRateLimit, clearRateLimit } from '@/lib/rate-limit';
+
+export { checkRateLimit, clearRateLimit, getClientIp } from '@/lib/rate-limit';
 
 const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'karate_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 días
@@ -82,21 +85,15 @@ export async function destroyAdminSession() {
   cookies().delete(COOKIE_NAME);
 }
 
-/** Rate-limit naive en memoria para intentos de login. Aceptable para Vercel single-instance; un upgrade ideal usaría Upstash. */
-const loginAttempts = new Map<string, { count: number; firstAt: number }>();
-
-export function checkLoginRateLimit(ip: string, max = 5, windowMs = 15 * 60 * 1000): boolean {
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now - entry.firstAt > windowMs) {
-    loginAttempts.set(ip, { count: 1, firstAt: now });
-    return true;
-  }
-  if (entry.count >= max) return false;
-  entry.count += 1;
-  return true;
+/** Rate-limit para intentos de login admin (5/15min por IP). Wrapper del módulo compartido. */
+export function checkLoginRateLimit(
+  ip: string,
+  max = 5,
+  windowMs = 15 * 60 * 1000,
+): boolean {
+  return checkRateLimit(`admin:${ip}`, { max, windowMs }).allowed;
 }
 
 export function clearLoginRateLimit(ip: string) {
-  loginAttempts.delete(ip);
+  clearRateLimit(`admin:${ip}`);
 }
