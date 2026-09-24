@@ -1,4 +1,4 @@
-import { requireAdmin } from '@/lib/guards';
+import { requireRole, SUPERADMIN } from '@/lib/guards';
 import { getServiceAccountCredentials } from '@/lib/google-credentials';
 import {
   getMercadoPagoCredentials,
@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Integraciones', robots: { index: false, follow: false } };
 
 export default async function IntegrationsPage() {
-  await requireAdmin();
+  await requireRole(SUPERADMIN);
 
   // Cargamos las 4 integraciones en paralelo.
   const [gdCreds, mpCreds, wsCreds, emCreds] = await Promise.all([

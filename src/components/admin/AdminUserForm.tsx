@@ -8,7 +8,7 @@ interface AdminUserData {
   id?: string;
   email?: string;
   name?: string;
-  role?: 'superadmin' | 'admin' | 'editor';
+  role?: 'superadmin' | 'sensei' | 'admin' | 'editor';
 }
 
 interface Props {
@@ -19,6 +19,7 @@ interface Props {
 
 const ROLES = [
   { value: 'superadmin', label: 'Superadmin' },
+  { value: 'sensei', label: 'Sensei' },
   { value: 'admin', label: 'Admin' },
   { value: 'editor', label: 'Editor' },
 ];

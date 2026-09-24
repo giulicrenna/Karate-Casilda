@@ -14,13 +14,13 @@ function getIp(req: NextRequest): string {
   );
 }
 
-function requireSuperadminOr401() {
+function requireSuperadminOrSensei401() {
   return getAdminSession().then((s) => {
     if (!s) return { session: null, error: NextResponse.json({ error: 'No autorizado' }, { status: 401 }) };
-    if (s.role !== 'superadmin') {
+    if (s.role !== 'superadmin' && s.role !== 'sensei') {
       return {
         session: null,
-        error: NextResponse.json({ error: 'Acceso restringido a superadmin' }, { status: 403 }),
+        error: NextResponse.json({ error: 'Acceso restringido a superadmin o sensei' }, { status: 403 }),
       };
     }
     return { session: s, error: null };
@@ -28,7 +28,7 @@ function requireSuperadminOr401() {
 }
 
 export async function GET(_req: NextRequest) {
-  const { session, error } = await requireSuperadminOr401();
+  const { session, error } = await requireSuperadminOrSensei401();
   if (error || !session) return error ?? NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const items = await prisma.adminUser.findMany({
@@ -46,7 +46,7 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { session, error } = await requireSuperadminOr401();
+  const { session, error } = await requireSuperadminOrSensei401();
   if (error || !session) return error ?? NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   let body: unknown;

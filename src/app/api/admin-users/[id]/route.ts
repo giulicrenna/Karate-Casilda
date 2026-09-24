@@ -14,20 +14,20 @@ function getIp(req: NextRequest): string {
   );
 }
 
-async function requireSuperadminOr401() {
+async function requireSuperadminOrSensei401() {
   const s = await getAdminSession();
   if (!s) return { session: null, error: NextResponse.json({ error: 'No autorizado' }, { status: 401 }) };
-  if (s.role !== 'superadmin') {
+  if (s.role !== 'superadmin' && s.role !== 'sensei') {
     return {
       session: null,
-      error: NextResponse.json({ error: 'Acceso restringido a superadmin' }, { status: 403 }),
+      error: NextResponse.json({ error: 'Acceso restringido a superadmin o sensei' }, { status: 403 }),
     };
   }
   return { session: s, error: null };
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireSuperadminOr401();
+  const { error } = await requireSuperadminOrSensei401();
   if (error) return error;
 
   const user = await prisma.adminUser.findUnique({
@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const { session, error } = await requireSuperadminOr401();
+  const { session, error } = await requireSuperadminOrSensei401();
   if (error || !session) return error ?? NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   let body: unknown;
@@ -80,6 +80,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
+  // No permitir degradar al único sensei del sistema.
+  if (existing.role === 'sensei' && data.role && data.role !== 'sensei') {
+    const senseiCount = await prisma.adminUser.count({ where: { role: 'sensei' } });
+    if (senseiCount <= 1) {
+      return NextResponse.json(
+        { error: 'No podés degradar al único sensei del sistema.' },
+        { status: 400 }
+      );
+    }
+  }
+
   const updateData: Record<string, unknown> = {};
   if (data.email !== undefined) updateData.email = data.email.toLowerCase();
   if (data.name !== undefined) updateData.name = data.name;
@@ -109,7 +120,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { session, error } = await requireSuperadminOr401();
+  const { session, error } = await requireSuperadminOrSensei401();
   if (error || !session) return error ?? NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
   const existing = await prisma.adminUser.findUnique({ where: { id: params.id } });
@@ -129,6 +140,17 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     if (superadminCount <= 1) {
       return NextResponse.json(
         { error: 'No podés eliminar al único superadmin del sistema.' },
+        { status: 400 }
+      );
+    }
+  }
+
+  // No permitir eliminar al único sensei del sistema.
+  if (existing.role === 'sensei') {
+    const senseiCount = await prisma.adminUser.count({ where: { role: 'sensei' } });
+    if (senseiCount <= 1) {
+      return NextResponse.json(
+        { error: 'No podés eliminar al único sensei del sistema.' },
         { status: 400 }
       );
     }

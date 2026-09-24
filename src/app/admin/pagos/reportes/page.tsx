@@ -12,7 +12,7 @@ export default async function AdminReportsPage() {
   const now = new Date();
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-  const [paymentsRaw, expensesRaw, pendingAgg, totalCollectedAgg, debtsRaw, activeStudents] =
+  const [paymentsRaw, expensesRaw, incomesRaw, pendingAgg, totalCollectedAgg, debtsRaw, activeStudents] =
     await Promise.all([
       prisma.payment.findMany({
         where: {
@@ -22,6 +22,10 @@ export default async function AdminReportsPage() {
         select: { amount: true, paidAt: true },
       }),
       prisma.expense.findMany({
+        where: { occurredAt: { gte: twelveMonthsAgo } },
+        select: { amount: true, occurredAt: true, category: true },
+      }),
+      prisma.income.findMany({
         where: { occurredAt: { gte: twelveMonthsAgo } },
         select: { amount: true, occurredAt: true, category: true },
       }),
@@ -85,8 +89,19 @@ export default async function AdminReportsPage() {
     const key = `${e.occurredAt.getFullYear()}-${e.occurredAt.getMonth() + 1}`;
     expenseByKey.set(key, (expenseByKey.get(key) ?? 0) + Number(e.amount));
   }
+  const incomeByKey = new Map<string, number>();
+  for (const i of incomesRaw as Array<{ amount: unknown; occurredAt: Date }>) {
+    const key = `${i.occurredAt.getFullYear()}-${i.occurredAt.getMonth() + 1}`;
+    incomeByKey.set(key, (incomeByKey.get(key) ?? 0) + Number(i.amount));
+  }
 
-  const monthly: { year: number; month: number; revenue: number; expenses: number }[] = [];
+  const monthly: {
+    year: number;
+    month: number;
+    revenue: number;
+    expenses: number;
+    additionalIncome: number;
+  }[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
@@ -95,10 +110,12 @@ export default async function AdminReportsPage() {
       month: d.getMonth() + 1,
       revenue: paymentByKey.get(key) ?? 0,
       expenses: expenseByKey.get(key) ?? 0,
+      additionalIncome: incomeByKey.get(key) ?? 0,
     });
   }
 
   const totalExpenses = expensesRaw.reduce((s: number, e: { amount: unknown }) => s + Number(e.amount), 0);
+  const totalIncome = incomesRaw.reduce((s: number, i: { amount: unknown }) => s + Number(i.amount), 0);
 
   // Categorías de gasto (todos los tiempos)
   const allExpenses = await prisma.expense.findMany({
@@ -128,6 +145,7 @@ export default async function AdminReportsPage() {
         topDebtors={topDebtors}
         totalRevenue={totalRevenue}
         totalExpenses={totalExpenses}
+        totalIncome={totalIncome}
         pendingTotal={pendingTotal}
         collectibility={collectibility}
         activeStudents={activeStudents}

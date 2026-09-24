@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { requireRole, SUPERADMIN } from '@/lib/guards';
+import { requireRole, SUPERADMIN, SENSEI } from '@/lib/guards';
 import { prisma } from '@/lib/db';
 import AdminShell from '@/components/admin/AdminShell';
 import AdminUserRowActions from '@/components/admin/AdminUserRowActions';
@@ -11,12 +11,13 @@ export const metadata = { title: 'Usuarios admin', robots: { index: false, follo
 
 const ROLE_LABEL: Record<string, string> = {
   superadmin: 'Superadmin',
+  sensei: 'Sensei',
   admin: 'Admin',
   editor: 'Editor',
 };
 
 export default async function AdminUsuariosPage() {
-  const session = await requireRole(SUPERADMIN);
+  const session = await requireRole(SUPERADMIN, SENSEI);
 
   const users = await prisma.adminUser.findMany({
     orderBy: [{ role: 'asc' }, { name: 'asc' }],
@@ -24,13 +25,13 @@ export default async function AdminUsuariosPage() {
   });
 
   return (
-    <AdminShell role="superadmin">
+    <AdminShell role={session.role}>
       <header className="flex items-center justify-between gap-3 border-b border-ink-900 pb-4 mb-6">
         <div>
           <div className="text-xs uppercase tracking-wider text-shiroi-500">Usuarios</div>
           <h1 className="font-display text-2xl text-ink-50">Usuarios administradores</h1>
           <p className="mt-1 text-xs text-ink-500">
-            Solo accesible para superadmins. {users.length} usuario{users.length === 1 ? '' : 's'}.
+            Solo accesible para superadmins y sensei. {users.length} usuario{users.length === 1 ? '' : 's'}.
           </p>
         </div>
         <Link href="/admin/usuarios/nuevo" className="btn-primary text-xs">
@@ -78,6 +79,8 @@ export default async function AdminUsuariosPage() {
                         'inline-block rounded-sm px-2 py-0.5 text-[10px] uppercase tracking-wider ' +
                         (u.role === 'superadmin'
                           ? 'bg-shiroi-900/30 text-shiroi-300'
+                          : u.role === 'sensei'
+                          ? 'bg-amber-900/30 text-amber-300'
                           : u.role === 'admin'
                           ? 'bg-emerald-900/30 text-emerald-300'
                           : 'bg-ink-800 text-ink-400')

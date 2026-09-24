@@ -8,6 +8,7 @@ interface MonthlyRevenuePoint {
   month: number;
   revenue: number;
   expenses: number;
+  additionalIncome: number;
 }
 
 interface CategoryBreakdown {
@@ -27,6 +28,7 @@ interface Props {
   topDebtors: TopDebtor[];
   totalRevenue: number;
   totalExpenses: number;
+  totalIncome: number;
   pendingTotal: number;
   collectibility: number; // 0..100
   activeStudents: number;
@@ -48,6 +50,7 @@ export default function StudentReportsCharts({
   topDebtors,
   totalRevenue,
   totalExpenses,
+  totalIncome,
   pendingTotal,
   collectibility,
   activeStudents,
@@ -55,7 +58,7 @@ export default function StudentReportsCharts({
   const balance = totalRevenue - totalExpenses;
   const maxMonthly = Math.max(
     1,
-    ...monthly.map((m) => Math.max(m.revenue, m.expenses)),
+    ...monthly.map((m) => Math.max(m.revenue, m.expenses, m.additionalIncome)),
   );
 
   return (
@@ -100,6 +103,12 @@ export default function StudentReportsCharts({
                     colorClass="bg-emerald-500/80"
                   />
                   <Bar
+                    label="Ingresos adicionales"
+                    value={m.additionalIncome}
+                    max={maxMonthly}
+                    colorClass="bg-amber-500/80"
+                  />
+                  <Bar
                     label="Gastos"
                     value={m.expenses}
                     max={maxMonthly}
@@ -110,6 +119,14 @@ export default function StudentReportsCharts({
             ))}
           </div>
         )}
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <KpiTile
+          label="Ingresos adicionales"
+          value={formatARS(totalIncome)}
+          tone="info"
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">

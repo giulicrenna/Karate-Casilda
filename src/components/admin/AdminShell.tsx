@@ -18,12 +18,13 @@ import {
   Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { AdminRole } from '@/lib/guards';
 
 type NavItem = {
   href: string;
   label: string;
   icon: React.ReactNode;
-  superadminOnly?: boolean;
+  allowed?: (role: AdminRole | undefined) => boolean;
 };
 
 const NAV: NavItem[] = [
@@ -36,10 +37,25 @@ const NAV: NavItem[] = [
   { href: '/admin/articulos', label: 'Artículos', icon: <Newspaper className="h-4 w-4" /> },
   { href: '/admin/autores', label: 'Autores', icon: <UserCircle className="h-4 w-4" /> },
   { href: '/admin/contenido', label: 'Contenido', icon: <FileText className="h-4 w-4" /> },
-  { href: '/admin/integraciones', label: 'Integraciones', icon: <Plug className="h-4 w-4" /> },
+  {
+    href: '/admin/integraciones',
+    label: 'Integraciones',
+    icon: <Plug className="h-4 w-4" />,
+    allowed: (r) => r === 'superadmin',
+  },
   { href: '/admin/notificaciones', label: 'Notificaciones', icon: <Bell className="h-4 w-4" /> },
-  { href: '/admin/cron', label: 'Cron jobs', icon: <Timer className="h-4 w-4" /> },
-  { href: '/admin/usuarios', label: 'Usuarios', icon: <ShieldCheck className="h-4 w-4" />, superadminOnly: true },
+  {
+    href: '/admin/cron',
+    label: 'Cron jobs',
+    icon: <Timer className="h-4 w-4" />,
+    allowed: (r) => r === 'superadmin' || r === 'admin',
+  },
+  {
+    href: '/admin/usuarios',
+    label: 'Usuarios',
+    icon: <ShieldCheck className="h-4 w-4" />,
+    allowed: (r) => r === 'superadmin' || r === 'sensei',
+  },
 ];
 
 export default function AdminShell({
@@ -47,9 +63,9 @@ export default function AdminShell({
   role,
 }: {
   children: React.ReactNode;
-  role?: 'superadmin' | 'admin' | 'editor';
+  role?: AdminRole;
 }) {
-  const items = NAV.filter((i) => !i.superadminOnly || role === 'superadmin');
+  const items = NAV.filter((i) => !i.allowed || i.allowed(role));
   const pathname = usePathname();
 
   return (
