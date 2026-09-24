@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Banknote, ListChecks, BarChart3 } from 'lucide-react';
+import { Banknote, ListChecks, BarChart3, TrendingUp } from 'lucide-react';
 import { requireAdmin } from '@/lib/guards';
 import { prisma } from '@/lib/db';
 import AdminShell from '@/components/admin/AdminShell';
@@ -88,6 +88,10 @@ export default async function AdminPagosPage() {
           <Link href="/admin/pagos/gastos" className="btn-secondary text-xs">
             <Banknote className="h-4 w-4" />
             Gastos
+          </Link>
+          <Link href="/admin/pagos/ingresos" className="btn-secondary text-xs">
+            <TrendingUp className="h-4 w-4" />
+            Ingresos
           </Link>
           <Link href="/admin/pagos/reportes" className="btn-secondary text-xs">
             <BarChart3 className="h-4 w-4" />
