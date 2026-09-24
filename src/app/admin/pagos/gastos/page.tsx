@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import AdminShell from '@/components/admin/AdminShell';
 import ExpenseTable from '@/components/admin/ExpenseTable';
 import ExpenseRowActions from '@/components/admin/ExpenseRowActions';
+import FinanceTabs from '@/components/admin/FinanceTabs';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Pagos · Gastos', robots: { index: false, follow: false } };
@@ -30,7 +31,7 @@ export default async function AdminExpensesPage() {
     <AdminShell>
       <header className="flex items-center justify-between gap-3 border-b border-ink-900 pb-4 mb-6">
         <div>
-          <div className="text-xs uppercase tracking-wider text-shiroi-500">Pagos</div>
+          <div className="text-xs uppercase tracking-wider text-shiroi-500">Finanzas</div>
           <h1 className="font-display text-2xl text-ink-50">Gastos del dojo</h1>
         </div>
         <Link href="/admin/pagos/gastos/nuevo" className="btn-primary text-xs">
@@ -38,6 +39,8 @@ export default async function AdminExpensesPage() {
           Nuevo gasto
         </Link>
       </header>
+
+      <FinanceTabs />
 
       <ExpenseTable
         expenses={expenses}

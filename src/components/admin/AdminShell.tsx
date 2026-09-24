@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Bell,
   Timer,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdminRole } from '@/lib/guards';
@@ -32,6 +33,7 @@ const NAV: NavItem[] = [
   { href: '/admin/alumnos', label: 'Alumnos', icon: <Users className="h-4 w-4" /> },
   { href: '/admin/pagos', label: 'Pagos', icon: <Wallet className="h-4 w-4" /> },
   { href: '/admin/cuotas', label: 'Cuotas', icon: <Receipt className="h-4 w-4" /> },
+  { href: '/admin/pagos/gastos', label: 'Finanzas', icon: <Banknote className="h-4 w-4" /> },
   { href: '/admin/eventos', label: 'Eventos', icon: <Calendar className="h-4 w-4" /> },
   { href: '/admin/albumes', label: 'Álbumes', icon: <Images className="h-4 w-4" /> },
   { href: '/admin/articulos', label: 'Artículos', icon: <Newspaper className="h-4 w-4" /> },
