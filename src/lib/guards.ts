@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation';
 import { getAdminSession, AdminSessionPayload } from '@/lib/auth';
 import { getStudentSession, StudentSessionPayload } from '@/lib/auth-student';
 
-export type AdminRole = 'superadmin' | 'admin' | 'editor';
+export type AdminRole = 'superadmin' | 'sensei' | 'admin' | 'editor';
 
 export const SUPERADMIN: AdminRole = 'superadmin';
+export const SENSEI: AdminRole = 'sensei';
 export const ADMIN: AdminRole = 'admin';
 export const EDITOR: AdminRole = 'editor';
 

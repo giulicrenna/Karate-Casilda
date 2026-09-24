@@ -247,6 +247,35 @@ export const ExpenseSchema = z.object({
 });
 
 // =====================================================
+// INGRESOS ADICIONALES — schemas para Fase 4
+// =====================================================
+
+export const IncomeCategoryEnum = z.enum([
+  'donacion',
+  'evento',
+  'sponsor',
+  'rifa',
+  'venta',
+  'alquiler',
+  'otro',
+]);
+
+export const IncomeMethodEnum = z.enum(['cash', 'transfer', 'mercadopago', 'other']);
+
+export const IncomeSchema = z.object({
+  category: IncomeCategoryEnum,
+  description: z.string().min(2).max(300),
+  amount: z.number().min(0).max(10000000),
+  occurredAt: z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Fecha inválida'),
+  source: z.string().max(160).optional().nullable(),
+  method: IncomeMethodEnum,
+  receiptDriveFileId: z.string().min(10).max(200).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+export const IncomeUpdateSchema = IncomeSchema.partial();
+
+// =====================================================
 // PAGOS / DEUDAS — schemas para Fase 3+
 // =====================================================
 
@@ -281,13 +310,13 @@ export const AdminUserCreateSchema = z.object({
   email: z.string().email('Email inválido'),
   name: z.string().min(2).max(120),
   password: z.string().min(10).max(72),
-  role: z.enum(['superadmin', 'admin', 'editor']).default('admin'),
+  role: z.enum(['superadmin', 'sensei', 'admin', 'editor']).default('admin'),
 });
 
 export const AdminUserUpdateSchema = z.object({
   email: z.string().email().optional(),
   name: z.string().min(2).max(120).optional(),
-  role: z.enum(['superadmin', 'admin', 'editor']).optional(),
+  role: z.enum(['superadmin', 'sensei', 'admin', 'editor']).optional(),
   password: z.string().min(10).max(72).optional(),
 });
 
@@ -305,6 +334,7 @@ export type StudentLoginInput = z.infer<typeof StudentLoginSchema>;
 export type FeeRuleInput = z.infer<typeof FeeRuleSchema>;
 export type LateSurchargeRuleInput = z.infer<typeof LateSurchargeRuleSchema>;
 export type ExpenseInput = z.infer<typeof ExpenseSchema>;
+export type IncomeInput = z.infer<typeof IncomeSchema>;
 export type ManualPaymentInput = z.infer<typeof ManualPaymentSchema>;
 export type CheckoutInput = z.infer<typeof CheckoutSchema>;
 export type GenerateDebtInput = z.infer<typeof GenerateDebtSchema>;

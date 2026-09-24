@@ -14,24 +14,24 @@ datasource db {
 // USUARIOS — autenticación admin
 // =====================================================
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String         @id @default(cuid())
+  email        String         @unique
   name         String
   passwordHash String
-  role         String   @default("admin") // superadmin | admin | editor
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         String         @default("admin") // superadmin | admin | editor
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
   sessions     AdminSession[]
 
   @@index([email])
 }
 
 model AdminSession {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  token     String   @unique
+  token     String    @unique
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -44,7 +44,7 @@ model AdminSession {
 model SiteContent {
   id        String   @id @default(cuid())
   key       String   @unique // ej: "home.hero.title", "dokun.original", "contact.address"
-  value     String   // JSON o texto plano
+  value     String // JSON o texto plano
   updatedAt DateTime @updatedAt
 }
 
@@ -68,19 +68,19 @@ model Author {
 // ARTÍCULOS — contenido editorial del dojo
 // =====================================================
 model Article {
-  id               String    @id @default(cuid())
-  slug             String    @unique
+  id               String   @id @default(cuid())
+  slug             String   @unique
   title            String
-  excerpt          String    // resumen corto (cards + meta description)
-  body             String    // markdown
-  category         String    // anuncios | tecnica | historia | eventos | general
-  coverDriveFileId String?   // opcional: imagen de portada servida por /api/thumb/[id]
-  published        Boolean   @default(true)
-  featured         Boolean   @default(false) // reservado para uso futuro
-  publishedAt      DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  excerpt          String // resumen corto (cards + meta description)
+  body             String // markdown
+  category         String // anuncios | tecnica | historia | eventos | general
+  coverDriveFileId String? // opcional: imagen de portada servida por /api/thumb/[id]
+  published        Boolean  @default(true)
+  featured         Boolean  @default(false) // reservado para uso futuro
+  publishedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   authorId         String
-  author           Author    @relation(fields: [authorId], references: [id])
+  author           Author   @relation(fields: [authorId], references: [id])
 
   @@index([published, publishedAt])
   @@index([category])
@@ -96,9 +96,9 @@ model Event {
   title       String
   date        DateTime
   location    String?
-  description String   // markdown
-  category    String   // torneo | examen | seminario | exhibicion | entrenamiento | otro
-  coverImage  String?  // opcional: URL pública o Google Drive ID
+  description String // markdown
+  category    String // torneo | examen | seminario | exhibicion | entrenamiento | otro
+  coverImage  String? // opcional: URL pública o Google Drive ID
   status      String   @default("upcoming") // upcoming | past | cancelled
   featured    Boolean  @default(false)
   albumId     String?  @unique
@@ -120,16 +120,16 @@ model Album {
   title           String
   description     String?
   date            DateTime
-  coverImageId    String?  // Google Drive file ID (portada)
-  driveFolderId   String   // Google Drive folder ID
-  driveFolderPath String?  // opcional: path legible "Karate Casilda/2026/Torneo Casilda 2026"
+  coverImageId    String? // Google Drive file ID (portada)
+  driveFolderId   String // Google Drive folder ID
+  driveFolderPath String? // opcional: path legible "Karate Casilda/2026/Torneo Casilda 2026"
   photoCount      Int      @default(0)
   featured        Boolean  @default(false)
   published       Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  event           Event?
+  event Event?
 
   @@index([date])
   @@index([featured])
@@ -150,9 +150,9 @@ model DrivePhotoCache {
   width        Int?
   height       Int?
   sizeBytes    Int?
-  thumbnailUrl String?  // URL cacheada del thumbnail (lh3.googleusercontent.com)
-  viewUrl      String?  // URL cacheada para ver en tamaño completo
-  downloadUrl  String?  // URL cacheada para descarga
+  thumbnailUrl String? // URL cacheada del thumbnail (lh3.googleusercontent.com)
+  viewUrl      String? // URL cacheada para ver en tamaño completo
+  downloadUrl  String? // URL cacheada para descarga
   createdAt    DateTime @default(now())
   cachedAt     DateTime @default(now())
 
@@ -165,10 +165,10 @@ model DrivePhotoCache {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
-  action    String   // login | create_event | update_album | delete_photo | etc
-  entity    String?  // event | album | user | content
+  action    String // login | create_event | update_album | delete_photo | etc
+  entity    String? // event | album | user | content
   entityId  String?
-  metadata  String?  // JSON con detalles
+  metadata  String? // JSON con detalles
   ip        String?
   createdAt DateTime @default(now())
 
@@ -182,7 +182,7 @@ model AuditLog {
 // =====================================================
 model IntegrationConfig {
   key       String   @id // ej: "google_drive_sa", "mercadopago", "wasender", "email"
-  encrypted String   // AES-256-GCM (iv:tag:ciphertext, hex)
+  encrypted String // AES-256-GCM (iv:tag:ciphertext, hex)
   updatedAt DateTime @updatedAt
 }
 
@@ -190,47 +190,47 @@ model IntegrationConfig {
 // ALUMNOS — autenticación y datos básicos
 // =====================================================
 model Student {
-  id            String   @id @default(cuid())
-  email         String   @unique
+  id            String    @id @default(cuid())
+  email         String    @unique
   passwordHash  String
   firstName     String
   lastName      String
-  dni           String?  @unique
+  dni           String?   @unique
   phone         String?
-  whatsapp      String?  // E.164, usado por WaSender
+  whatsapp      String? // E.164, usado por WaSender
   birthDate     DateTime?
-  active        Boolean  @default(true) // baja lógica
-  joinedAt      DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  mustChangePwd Boolean  @default(true) // fuerza cambio en primer login
+  active        Boolean   @default(true) // baja lógica
+  joinedAt      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  mustChangePwd Boolean   @default(true) // fuerza cambio en primer login
 
-  profile          StudentProfile?
-  certificates     Certificate[]
-  attendance       AttendanceRecord[]
-  debts            Debt[]
-  payments         Payment[]
-  sessions         StudentSession[]
-  passwordResets   StudentPasswordReset[]
+  profile        StudentProfile?
+  certificates   Certificate[]
+  attendance     AttendanceRecord[]
+  debts          Debt[]
+  payments       Payment[]
+  sessions       StudentSession[]
+  passwordResets StudentPasswordReset[]
 
   @@index([active])
   @@index([lastName, firstName])
 }
 
 model StudentProfile {
-  id                   String   @id @default(cuid())
-  studentId            String   @unique
-  weightKg             Decimal? @db.Decimal(5, 2)
-  heightCm             Int?
-  emergencyName        String?
-  emergencyPhone       String?
-  medicalNotes         String?  @db.Text
-  allergies            String?
-  photoDriveFileId     String?
-  attendanceDaysPerWeek Int     @default(2) // base para fee engine: 1..7
-  belt                 String?  // blanca | amarilla | naranja | verde | azul | marfil | negra
-  notes                String?  @db.Text
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  studentId             String   @unique
+  weightKg              Decimal? @db.Decimal(5, 2)
+  heightCm              Int?
+  emergencyName         String?
+  emergencyPhone        String?
+  medicalNotes          String?  @db.Text
+  allergies             String?
+  photoDriveFileId      String?
+  attendanceDaysPerWeek Int      @default(2) // base para fee engine: 1..7
+  belt                  String? // blanca | amarilla | naranja | verde | azul | marfil | negra
+  notes                 String?  @db.Text
+  updatedAt             DateTime @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
@@ -249,12 +249,12 @@ model StudentSession {
 }
 
 model StudentPasswordReset {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   studentId String
-  tokenHash String   @unique // SHA-256 del token enviado por email
+  tokenHash String    @unique // SHA-256 del token enviado por email
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -262,17 +262,21 @@ model StudentPasswordReset {
 }
 
 // =====================================================
-// CERTIFICADOS — PDFs / PNGs subidos por admin (viven en Drive)
+// CERTIFICADOS — PDFs / PNGs subidos por admin
+// Almacenados en Vercel Blob (campo blobUrl). El campo driveFileId
+// queda como legacy opcional para registros anteriores a la migración.
 // =====================================================
 model Certificate {
   id           String   @id @default(cuid())
   studentId    String
   title        String
-  type         String   // cinturon | diploma | asistencia | otro
+  type         String // cinturon | diploma | asistencia | otro
   issuedAt     DateTime @default(now())
-  driveFileId  String   // archivo en Google Drive (mismo patrón que fotos)
+  blobUrl      String? // Vercel Blob URL del archivo (PDF/imagen)
+  driveFileId  String? // legacy: archivo histórico en Google Drive
   fileMimeType String
   fileName     String
+  fileSize     Int? // bytes, opcional
   notes        String?
   createdAt    DateTime @default(now())
 
@@ -286,8 +290,8 @@ model Certificate {
 // =====================================================
 model FeeRule {
   id             String    @id @default(cuid())
-  name           String    // "Cuota mensual 2 días"
-  daysPerWeek    Int       // 1..7
+  name           String // "Cuota mensual 2 días"
+  daysPerWeek    Int // 1..7
   monthlyAmount  Decimal   @db.Decimal(10, 2)
   effectiveFrom  DateTime  @default(now())
   effectiveUntil DateTime?
@@ -301,7 +305,7 @@ model FeeRule {
 // Reglas de recargo por mora
 model LateSurchargeRule {
   id             String    @id @default(cuid())
-  name           String    // "Recargo 10% a partir del día 11"
+  name           String // "Recargo 10% a partir del día 11"
   graceDays      Int       @default(10) // día del mes en que empieza a regir
   surchargePct   Decimal   @db.Decimal(5, 2) // ej 10.00 = 10%
   active         Boolean   @default(true)
@@ -320,7 +324,7 @@ model AttendanceRecord {
   date       DateTime @db.Date
   present    Boolean  @default(true)
   notes      String?
-  recordedBy String?  // adminUserId
+  recordedBy String? // adminUserId
   createdAt  DateTime @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -336,7 +340,7 @@ model Debt {
   id               String   @id @default(cuid())
   studentId        String
   periodYear       Int
-  periodMonth      Int      // 1..12
+  periodMonth      Int // 1..12
   baseAmount       Decimal  @db.Decimal(10, 2)
   surchargeAmount  Decimal  @default(0) @db.Decimal(10, 2)
   manualAdjustment Decimal  @default(0) @db.Decimal(10, 2) // +/- ajuste manual admin
@@ -349,7 +353,7 @@ model Debt {
   generatedAt      DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student       Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
   payments      Payment[]
   notifications NotificationLog[]
 
@@ -362,21 +366,21 @@ model Debt {
 // PAGOS (uno por transacción MP o carga manual)
 // =====================================================
 model Payment {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   studentId      String
   debtId         String?
-  amount         Decimal  @db.Decimal(10, 2)
-  currency       String   @default("ARS")
-  method         String   // mercadopago | manual | cash | transfer
-  status         String   @default("pending") // pending | approved | rejected | refunded
-  mpPaymentId    String?  @unique
-  mpPreferenceId String?  @unique
+  amount         Decimal   @db.Decimal(10, 2)
+  currency       String    @default("ARS")
+  method         String // mercadopago | manual | cash | transfer
+  status         String    @default("pending") // pending | approved | rejected | refunded
+  mpPaymentId    String?   @unique
+  mpPreferenceId String?   @unique
   mpStatus       String?
   mpStatusDetail String?
   paidAt         DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  metadata       String?  @db.Text // JSON crudo de MP (idempotente)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  metadata       String?   @db.Text // JSON crudo de MP (idempotente)
   receiptUrl     String?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -388,15 +392,15 @@ model Payment {
 }
 
 model PaymentWebhookEvent {
-  id           String   @id @default(cuid())
-  source       String   // mercadopago
-  eventType    String   // payment | plan | subscription
+  id           String    @id @default(cuid())
+  source       String // mercadopago
+  eventType    String // payment | plan | subscription
   mpPaymentId  String?
-  payload      String   @db.Text // JSON crudo
-  processed    Boolean  @default(false)
+  payload      String    @db.Text // JSON crudo
+  processed    Boolean   @default(false)
   processedAt  DateTime?
   errorMessage String?
-  receivedAt   DateTime @default(now())
+  receivedAt   DateTime  @default(now())
 
   @@index([processed, receivedAt])
   @@index([mpPaymentId])
@@ -406,17 +410,39 @@ model PaymentWebhookEvent {
 // GASTOS DEL DOJO
 // =====================================================
 model Expense {
-  id                String   @id @default(cuid())
-  category          String   // alquiler | sueldos | servicios | insumos | mantenimiento | impuestos | otro
-  description       String
-  amount            Decimal  @db.Decimal(10, 2)
-  occurredAt        DateTime
-  vendor            String?
+  id                 String   @id @default(cuid())
+  category           String // alquiler | sueldos | servicios | insumos | mantenimiento | impuestos | otro
+  description        String
+  amount             Decimal  @db.Decimal(10, 2)
+  occurredAt         DateTime
+  vendor             String?
   receiptDriveFileId String?
-  notes             String?
-  recordedBy        String?  // adminUserId
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  notes              String?
+  recordedBy         String? // adminUserId
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([occurredAt])
+  @@index([category])
+}
+
+// =====================================================
+// INGRESOS ADICIONALES — donaciones, eventos, sponsors, rifas, ventas, alquileres.
+// Separado de Payment (cuotas de alumnos).
+// =====================================================
+model Income {
+  id                 String   @id @default(cuid())
+  category           String // donacion | evento | sponsor | rifa | venta | alquiler | otro
+  description        String
+  amount             Decimal  @db.Decimal(10, 2)
+  occurredAt         DateTime
+  source             String? // nombre libre del donante / organizador / origen
+  method             String // cash | transfer | mercadopago | other
+  receiptDriveFileId String?
+  notes              String?
+  recordedBy         String? // adminUserId
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([occurredAt])
   @@index([category])
@@ -426,17 +452,17 @@ model Expense {
 // LOG DE NOTIFICACIONES — email + whatsapp
 // =====================================================
 model NotificationLog {
-  id               String   @id @default(cuid())
-  channel          String   // email | whatsapp
-  recipient        String   // email o teléfono
-  template         String   // payment_received | due_reminder | overdue_notice | welcome | password_reset
+  id               String    @id @default(cuid())
+  channel          String // email | whatsapp
+  recipient        String // email o teléfono
+  template         String // payment_received | due_reminder | overdue_notice | welcome | password_reset
   relatedDebtId    String?
   relatedStudentId String?
-  payload          String   @db.Text // JSON con variables usadas
-  status           String   @default("pending") // sent | failed | skipped
+  payload          String    @db.Text // JSON con variables usadas
+  status           String    @default("pending") // sent | failed | skipped
   errorMessage     String?
   sentAt           DateTime?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now())
 
   debt Debt? @relation(fields: [relatedDebtId], references: [id])
 
@@ -450,10 +476,10 @@ model NotificationLog {
 // =====================================================
 model CronRun {
   id           String    @id @default(cuid())
-  jobName      String    // "monthly_debts" | "overdue_check"
+  jobName      String // "monthly_debts" | "overdue_check"
   status       String    @default("running") // running | success | failed
-  trigger      String    // "cron_vercel" | "manual_admin" | "manual_superadmin" | "system"
-  triggeredBy  String?   // userId del admin que disparó (null si fue Vercel Cron automático)
+  trigger      String // "cron_vercel" | "manual_admin" | "manual_superadmin" | "system"
+  triggeredBy  String? // userId del admin que disparó (null si fue Vercel Cron automático)
   startedAt    DateTime  @default(now())
   finishedAt   DateTime?
   durationMs   Int?
